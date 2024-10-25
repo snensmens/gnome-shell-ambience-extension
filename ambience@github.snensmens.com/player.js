@@ -1,7 +1,7 @@
 import Gst from "gi://Gst?version=1.0";
 
 export default class Player {
-  constructor(onError) {
+  constructor() {
     Gst.init(null);
 
     this._pipeline = new Gst.Pipeline({

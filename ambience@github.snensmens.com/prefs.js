@@ -41,19 +41,21 @@ const SoundSettings = GObject.registerClass(
         );
       });
 
-      if (checkIfYtDlpInstalled()) {
-        this._ytdlpInfo.title = _("yt-dlp is installed");
-        this._ytdlpInfo.subtitle = "";
-        this._ytdlpInfo.css_classes = ["success"];
-        this._ytdlpInfoIcon.icon_name = "emblem-ok-symbolic";
-      } else {
-        this._ytdlpInfo.title = _("yt-dlp is not installed");
-        this._ytdlpInfo.subtitle = _(
-          "install yt-dlp to listen to youtube-videos",
-        );
-        this._ytdlpInfo.css_classes = ["warning"];
-        this._ytdlpInfoIcon.icon_name = "dialog-warning-symbolic";
-      }
+      checkIfYtDlpInstalled().then((isInstalled) => {
+        if (isInstalled) {
+          this._ytdlpInfo.title = _("yt-dlp is installed");
+          this._ytdlpInfo.subtitle = "";
+          this._ytdlpInfo.css_classes = ["success"];
+          this._ytdlpInfoIcon.icon_name = "emblem-ok-symbolic";
+        } else {
+          this._ytdlpInfo.title = _("yt-dlp is not installed");
+          this._ytdlpInfo.subtitle = _(
+            "install yt-dlp to listen to audio from youtube",
+          );
+          this._ytdlpInfo.css_classes = ["warning"];
+          this._ytdlpInfoIcon.icon_name = "dialog-warning-symbolic";
+        }
+      });
 
       this._soundGroup.title = _("Ambient Sounds");
 

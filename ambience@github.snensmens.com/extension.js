@@ -57,10 +57,14 @@ const AmbienceQuickToggle = GObject.registerClass(
       this._itemsSection = new PopupMenu.PopupMenuSection();
       this.menu.addMenuItem(this._itemsSection);
 
-      this._ytdlpInstalled = checkIfYtDlpInstalled();
+      this._ytdlpInstalled = false;
 
       this.activeRow = null;
-      this.syncEntries();
+
+      checkIfYtDlpInstalled().then((isInstalled) => {
+        this._ytdlpInstalled = isInstalled;
+        this.syncEntries();
+      });
     }
 
     syncEntries() {
@@ -69,7 +73,9 @@ const AmbienceQuickToggle = GObject.registerClass(
       this._itemsSection.removeAll();
 
       entries.forEach((entry) => {
-        const item = new PopupMenu.PopupMenuItem(entry.name);
+        const item = new PopupMenu.PopupMenuItem(entry.name, {
+          reactive: !(!this._ytdlpInstalled && entry.type === 2),
+        });
         const handlerId = item.connect("activate", () =>
           this._onEntryClicked(entry),
         );
@@ -78,9 +84,7 @@ const AmbienceQuickToggle = GObject.registerClass(
           item.setOrnament(PopupMenu.Ornament.CHECK);
         }
 
-        if (!(!this._ytdlpInstalled && entry.type === 2)) {
-          this._itemsSection.addMenuItem(item);
-        }
+        this._itemsSection.addMenuItem(item);
       });
     }
   },
@@ -98,20 +102,14 @@ export default class AmbienceExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
 
-    this._player = new Player((error) => this._onPlayerError(error));
-    this._playerUriHandlerId = this._player._playbin.connect(
-      "notify::uri",
-      () => {
-        if (this._toggle.checked) {
-          this._player.start();
-          this._toggle.subtitle = this._toggle.activeRow.name;
-          this._toggle.syncEntries();
-        }
-      },
-    );
-
     this._appIcon = Gio.icon_new_for_string(
       `${this.path}/resources/sound-wave-symbolic.svg`,
+    );
+
+    this._player = new Player();
+    this._playerUriHandlerId = this._player._playbin.connect(
+      "notify::uri",
+      () => this._onUriChanged(),
     );
 
     this._toggle = new AmbienceQuickToggle(
@@ -119,25 +117,9 @@ export default class AmbienceExtension extends Extension {
       this._appIcon,
       (entry) => this._onEntryClicked(entry),
     );
-    this._toggleHandlerId = this._toggle.connect("notify::checked", () => {
-      if (this._toggle.checked) {
-        const lastPlayedId = this._settings.get_int64("last-played");
-
-        this._settings
-          .get_value("sounds")
-          .recursiveUnpack()
-          .forEach((resource) => {
-            if (resource.id === lastPlayedId) {
-              this._onEntryClicked(resource);
-            }
-          });
-      } else {
-        this._player.stop();
-        this._toggle.subtitle = null;
-        this._toggle.activeRow = null;
-        this._toggle.syncEntries();
-      }
-    });
+    this._toggleChangedHandlerId = this._toggle.connect("notify::checked", () =>
+      this._onToggleChanged(),
+    );
 
     this._ambience_toggle_indicator = new AmbienceIndicator();
     this._ambience_toggle_indicator.quickSettingsItems.push(this._toggle);
@@ -148,7 +130,7 @@ export default class AmbienceExtension extends Extension {
   }
 
   disable() {
-    this._toggle.disconnect(this._toggleHandlerId);
+    this._toggle.disconnect(this._toggleChangedHandlerId);
     this._toggle = null;
 
     this._player._playbin.disconnect(this._playerUriHandlerId);
@@ -164,6 +146,34 @@ export default class AmbienceExtension extends Extension {
     this._appIcon = null;
   }
 
+  _onToggleChanged() {
+    if (this._toggle.checked) {
+      const lastPlayedId = this._settings.get_int64("last-played");
+
+      this._settings
+        .get_value("sounds")
+        .recursiveUnpack()
+        .forEach((resource) => {
+          if (resource.id === lastPlayedId) {
+            this._onEntryClicked(resource);
+          }
+        });
+    } else {
+      this._player.stop();
+      this._toggle.subtitle = null;
+      this._toggle.activeRow = null;
+      this._toggle.syncEntries();
+    }
+  }
+
+  _onUriChanged() {
+    if (this._toggle.checked) {
+      this._player.start();
+      this._toggle.subtitle = this._toggle.activeRow.name;
+      this._toggle.syncEntries();
+    }
+  }
+
   async _onEntryClicked(entry) {
     if (this._toggle.activeRow && this._toggle.activeRow.id === entry.id) {
       return;
@@ -176,9 +186,10 @@ export default class AmbienceExtension extends Extension {
     this._toggle.activeRow = entry;
     this._settings.set_int64("last-played", entry.id);
 
+    // we only have to set the uri of the new resource
+    // playback is handled in the _onUriChanged method when the player notifies us that the uri has changed
     if (entry.type === 2) {
       // if the entry refers to a youtube-link, we have to resolve the audio-url with yt-dlp
-      // the player handles the playback, when the changed uri is detected
       const query = await getYoutubeLinkFromUri(entry.uri);
       if (query.wasSuccessful) {
         this._player.setUri(query.result);

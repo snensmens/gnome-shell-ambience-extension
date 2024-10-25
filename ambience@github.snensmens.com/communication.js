@@ -54,7 +54,10 @@ async function execCommunicate(argv, cancellable) {
     result.result = stdout.trim();
     result.error = stderr.trim();
   } catch (e) {
-    console.error(`ambience:: executing command ${argv} failed:`, e);
+    console.error(
+      `ambience.communication:: executing command ${argv} failed:`,
+      e,
+    );
   }
 
   cancellable.disconnect(cancelId);
