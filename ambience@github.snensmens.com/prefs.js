@@ -35,9 +35,9 @@ const SoundSettings = GObject.registerClass(
       this._window = window;
 
       this._settings = settings;
-      this._settings.connect("changed::sounds", () => {
+      this._settings.connect("changed::resources", () => {
         this._updateResourcesList(
-          this._settings.get_value("sounds").recursiveUnpack(),
+          this._settings.get_value("resources").recursiveUnpack(),
         );
       });
 
@@ -61,7 +61,7 @@ const SoundSettings = GObject.registerClass(
 
       this._entries = [];
       this._updateResourcesList(
-        this._settings.get_value("sounds").recursiveUnpack(),
+        this._settings.get_value("resources").recursiveUnpack(),
       );
     }
 
@@ -88,11 +88,10 @@ const SoundSettings = GObject.registerClass(
 
     _saveResource({ resourceType, name, uri, id }) {
       var resourceExists = false;
-      const resources = this._settings.get_value("sounds").recursiveUnpack();
+      const resources = this._settings.get_value("resources").recursiveUnpack();
 
       resources.every((resource) => {
         if (resource.id === id) {
-          console.log("gefunden!");
           resource.type = resourceType;
           resource.name = name;
           resource.uri = uri;
@@ -129,7 +128,7 @@ const SoundSettings = GObject.registerClass(
         );
       });
 
-      this._settings.set_value("sounds", builder.end());
+      this._settings.set_value("resources", builder.end());
     }
 
     _updateResourcesList(resources) {
@@ -181,7 +180,7 @@ const SoundSettings = GObject.registerClass(
 
     _deleteEntry(entry) {
       const resources = this._settings
-        .get_value("sounds")
+        .get_value("resources")
         .recursiveUnpack()
         .filter((resource) => resource.id !== entry.id);
 
@@ -276,6 +275,10 @@ const AddResourceDialog = GObject.registerClass(
       this.set_response_enabled("save", editable !== null);
     }
 
+    /*
+     * called when one of the inputs changes
+     * disables the save button when inputes are invalid
+     */
     _onInputChanged() {
       if (this._nameRow.text.trim() === "") {
         this.set_response_enabled("save", false);
@@ -293,7 +296,9 @@ const AddResourceDialog = GObject.registerClass(
       fileDialog
         .open(this._window, null)
         .then((file) => (this._fileRow.text = file.get_uri()))
-        .catch((error) => console.log(error));
+        .catch((error) =>
+          console.error("ambience.prefs:: choosing file failed:", error),
+        );
     }
   },
 );

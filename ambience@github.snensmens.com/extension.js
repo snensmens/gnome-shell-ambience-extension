@@ -18,7 +18,6 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
 import Gio from "gi://Gio";
-import Gst from "gi://Gst?version=1.0";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
@@ -47,7 +46,6 @@ const AmbienceQuickToggle = GObject.registerClass(
       });
 
       this._settings = settings;
-      this._settings.connect("changed::sounds", () => this.syncEntries());
 
       this.gicon = icon;
       this.menu.setHeader(icon, _("Ambience"), null);
@@ -58,7 +56,6 @@ const AmbienceQuickToggle = GObject.registerClass(
       this.menu.addMenuItem(this._itemsSection);
 
       this._ytdlpInstalled = false;
-
       this.activeRow = null;
 
       checkIfYtDlpInstalled().then((isInstalled) => {
@@ -68,7 +65,7 @@ const AmbienceQuickToggle = GObject.registerClass(
     }
 
     syncEntries() {
-      const entries = this._settings.get_value("sounds").recursiveUnpack();
+      const entries = this._settings.get_value("resources").recursiveUnpack();
 
       this._itemsSection.removeAll();
 
@@ -76,9 +73,7 @@ const AmbienceQuickToggle = GObject.registerClass(
         const item = new PopupMenu.PopupMenuItem(entry.name, {
           reactive: !(!this._ytdlpInstalled && entry.type === 2),
         });
-        const handlerId = item.connect("activate", () =>
-          this._onEntryClicked(entry),
-        );
+        item.connect("activate", () => this._onEntryClicked(entry));
 
         if (this.activeRow && this.activeRow.id === entry.id) {
           item.setOrnament(PopupMenu.Ornament.CHECK);
@@ -86,6 +81,12 @@ const AmbienceQuickToggle = GObject.registerClass(
 
         this._itemsSection.addMenuItem(item);
       });
+    }
+
+    reset() {
+      this.subtitle = null;
+      this.activeRow = null;
+      this.syncEntries();
     }
   },
 );
@@ -107,9 +108,12 @@ export default class AmbienceExtension extends Extension {
     );
 
     this._player = new Player();
-    this._playerUriHandlerId = this._player._playbin.connect(
+    this._playerErrorSignalId = this._player.connect("error", () =>
+      this._onPlaybinError(),
+    );
+    this._playbinUriSignalId = this._player._playbin.connect(
       "notify::uri",
-      () => this._onUriChanged(),
+      () => this._onPlaybinUriChanged(),
     );
 
     this._toggle = new AmbienceQuickToggle(
@@ -117,12 +121,17 @@ export default class AmbienceExtension extends Extension {
       this._appIcon,
       (entry) => this._onEntryClicked(entry),
     );
-    this._toggleChangedHandlerId = this._toggle.connect("notify::checked", () =>
+    this._toggleChangedSignalId = this._toggle.connect("notify::checked", () =>
       this._onToggleChanged(),
     );
 
     this._ambience_toggle_indicator = new AmbienceIndicator();
     this._ambience_toggle_indicator.quickSettingsItems.push(this._toggle);
+
+    this._resourcesChangedSignalId = this._settings.connect(
+      "changed::resources",
+      () => this._toggle.syncEntries(),
+    );
 
     Main.panel.statusArea.quickSettings.addExternalIndicator(
       this._ambience_toggle_indicator,
@@ -130,43 +139,45 @@ export default class AmbienceExtension extends Extension {
   }
 
   disable() {
-    this._toggle.disconnect(this._toggleChangedHandlerId);
-    this._toggle = null;
-
-    this._player._playbin.disconnect(this._playerUriHandlerId);
-    this._player.destroy();
-    this._player = null;
+    this._toggle.disconnect(this._toggleChangedSignalId);
 
     this._ambience_toggle_indicator.quickSettingsItems.forEach((item) =>
       item.destroy(),
     );
     this._ambience_toggle_indicator.destroy();
 
-    this._settings = null;
+    this._player._playbin.disconnect(this._playbinUriSignalId);
+    this._player.disconnect(this._playerErrorSignalId);
+    this._player.destroy();
+    this._player = null;
+
     this._appIcon = null;
+
+    this._settings.disconnect(this._resourcesChangedSignalId);
+    this._settings = null;
+  }
+
+  _getResources() {
+    return this._settings.get_value("resources").recursiveUnpack();
   }
 
   _onToggleChanged() {
     if (this._toggle.checked) {
       const lastPlayedId = this._settings.get_int64("last-played");
 
-      this._settings
-        .get_value("sounds")
-        .recursiveUnpack()
-        .forEach((resource) => {
-          if (resource.id === lastPlayedId) {
-            this._onEntryClicked(resource);
-          }
-        });
+      this._getResources().forEach((resource) => {
+        if (resource.id === lastPlayedId) {
+          this._onEntryClicked(resource);
+        }
+      });
     } else {
       this._player.stop();
-      this._toggle.subtitle = null;
-      this._toggle.activeRow = null;
-      this._toggle.syncEntries();
+      this._toggle.reset();
     }
   }
 
-  _onUriChanged() {
+  _onPlaybinUriChanged() {
+    // if the toggle is active we start playback right along
     if (this._toggle.checked) {
       this._player.start();
       this._toggle.subtitle = this._toggle.activeRow.name;
@@ -174,8 +185,13 @@ export default class AmbienceExtension extends Extension {
     }
   }
 
+  _onPlaybinError() {
+    this._toggle.checked = false;
+  }
+
   async _onEntryClicked(entry) {
     if (this._toggle.activeRow && this._toggle.activeRow.id === entry.id) {
+      // do nothing if the user clicked on the already active entry
       return;
     }
 
@@ -187,7 +203,7 @@ export default class AmbienceExtension extends Extension {
     this._settings.set_int64("last-played", entry.id);
 
     // we only have to set the uri of the new resource
-    // playback is handled in the _onUriChanged method when the player notifies us that the uri has changed
+    // playback is handled in the _onPlaybinUriChanged method when the player notifies us that the uri has changed
     if (entry.type === 2) {
       // if the entry refers to a youtube-link, we have to resolve the audio-url with yt-dlp
       const query = await getYoutubeLinkFromUri(entry.uri);
