@@ -11,10 +11,13 @@ You can add ambient sounds from:
 
 ## Screenshots
 Quick Settings Menu
+
 ![](resources/screenshots/qsm-closed.png)
+
 ![](resources/screenshots/qsm-open.png)
 
 Settings
+
 ![](resources/screenshots/settings.png)
 
 ## Installation & Build from source
