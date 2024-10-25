@@ -1,0 +1,11 @@
+{
+  "name": "Ambience",
+  "description": "Listen to ambient sounds",
+  "uuid": "ambience@github.snensmens.com",
+  "url": "https://github.com/snensmens/gnome-shell-ambience-extension",
+  "shell-version": ["47"],
+  "session-modes": ["user"],
+  "gettext-domain": "ambience@github.snensmens.com",
+  "settings-schema": "org.gnome.shell.extensions.ambience",
+  "version": 1
+}

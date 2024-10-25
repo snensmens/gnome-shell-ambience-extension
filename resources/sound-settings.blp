@@ -1,0 +1,24 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SoundSettings : Adw.PreferencesPage {
+  icon-name: "preferences-system-symbolic";
+
+  Adw.PreferencesGroup {
+    Adw.ActionRow ytdlpInfo {
+      [prefix]
+      Image ytdlpInfoIcon{}
+    }
+  }
+
+  Adw.PreferencesGroup soundGroup {
+
+    [header-suffix]
+    Button {
+        valign: center;
+        icon-name: "list-add-symbolic";
+        clicked => $_addAmbientSound();
+        styles ["flat"]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $AddResourceDialog : Adw.AlertDialog {
+  extra-child: Box {
+    orientation: vertical;
+    spacing: 8;
+
+    ListBox {
+      selection-mode: none;
+      styles ["boxed-list"]
+
+      Adw.ComboRow resourceType {}
+    }
+
+    ListBox {
+      selection-mode: none;
+      styles ["boxed-list"]
+
+      Adw.EntryRow nameRow {
+        changed => $_onInputChanged();
+      }
+      Adw.EntryRow urlRow {
+        visible: bind fileRow.visible inverted;
+        changed => $_onInputChanged();
+      }
+      Adw.EntryRow fileRow {
+        changed => $_onInputChanged();
+
+        [suffix]
+        Button {
+          icon-name: "document-open-symbolic";
+          valign: center;
+          clicked => $_openFileChooser();
+          styles["flat"]
+        }
+      }
+    }
+  };
+}

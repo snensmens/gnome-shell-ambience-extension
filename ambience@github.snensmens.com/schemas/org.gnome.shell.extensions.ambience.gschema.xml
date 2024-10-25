@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ambience" path="/org/gnome/shell/extensions/ambience/">
+    <key name="sounds" type="aa{sv}">
+        <default>[]</default>
+    </key>
+
+    <key name="last-played" type="x">
+        <default>0</default>
+    </key>
+  </schema>
+</schemalist>
