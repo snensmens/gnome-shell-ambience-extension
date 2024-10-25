@@ -16,6 +16,7 @@ Quick Settings Menu
 ![](resources/screenshots/qsm-open.png)
 
 Settings
+
 ![](resources/screenshots/settings.png)
 
 ## Installation & Build from source
@@ -30,3 +31,6 @@ gnome-extensions install ambience@github.snensmens.com.shell-extension.zip --for
 ```
 
 If you want to build the extension you can use the `build.sh` script. For this you will have to have [blueprint-compiler](https://jwestman.pages.gitlab.gnome.org/blueprint-compiler/index.html) installed on your system.
+
+## Recognition
+Ambience is inspired by [lowfi](https://github.com/talwat/lowfi)
