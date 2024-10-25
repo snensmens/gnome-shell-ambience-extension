@@ -10,6 +10,13 @@ You can add ambient sounds from:
 > (*) requires [ytl-dlp](https://github.com/yt-dlp/yt-dlp) to be installed on your system
 
 ## Screenshots
+Quick Settings Menu
+
+![](resources/screenshots/qsm-closed.png)
+![](resources/screenshots/qsm-open.png)
+
+Settings
+![](resources/screenshots/settings.png)
 
 ## Installation & Build from source
 You can manually install the extension by cloning the repository:
