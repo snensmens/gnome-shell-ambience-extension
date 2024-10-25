@@ -16,7 +16,7 @@ You can manually install the extension by cloning the repository:
 ```
 git clone https://github.com/snensmens/gnome-shell-ambience-extension.git
 
-cd ambience@github.snensmens.com
+cd gnome-shell-ambience-extension/ambience@github.snensmens.com
 
 gnome-extensions pack --force --extra-source=resources/ --extra-source="communication.js" --extra-source="player.js"
 gnome-extensions install ambience@github.snensmens.com.shell-extension.zip --force
