@@ -198,7 +198,6 @@ export default class AmbienceExtension extends Extension {
     this._toggle.subtitle = null;
     this._player.stop();
 
-    this._toggle.checked = true;
     this._toggle.activeRow = entry;
     this._settings.set_int64("last-played", entry.id);
 
@@ -213,5 +212,7 @@ export default class AmbienceExtension extends Extension {
     } else {
       this._player.setUri(entry.uri);
     }
+
+    this._toggle.checked = true;
   }
 }

@@ -36,10 +36,13 @@ const SoundSettings = GObject.registerClass(
 
       this._settings = settings;
       this._settings.connect("changed::resources", () => {
-        this._updateResourcesList(
-          this._settings.get_value("resources").recursiveUnpack(),
-        );
+        this._updateResourcesList();
       });
+
+      this._soundGroup.title = _("Ambient Sounds");
+
+      this._entries = [];
+      this._updateResourcesList();
 
       checkIfYtDlpInstalled().then((isInstalled) => {
         if (isInstalled) {
@@ -56,13 +59,10 @@ const SoundSettings = GObject.registerClass(
           this._ytdlpInfoIcon.icon_name = "dialog-warning-symbolic";
         }
       });
+    }
 
-      this._soundGroup.title = _("Ambient Sounds");
-
-      this._entries = [];
-      this._updateResourcesList(
-        this._settings.get_value("resources").recursiveUnpack(),
-      );
+    _getResources() {
+      return this._settings.get_value("resources").recursiveUnpack();
     }
 
     _addAmbientSound(_button) {
@@ -72,18 +72,10 @@ const SoundSettings = GObject.registerClass(
         .choose(this._window, null)
         .then((action) => {
           if (action === "save") {
-            this._saveResource({
-              resourceType: dialog._resourceType.selected,
-              name: dialog._nameRow.text,
-              uri:
-                dialog._resourceType.selected === 0
-                  ? dialog._fileRow.text
-                  : dialog._urlRow.text,
-              id: dialog._resourceId,
-            });
+            this._saveResource(dialog.getData());
           }
         })
-        .catch((error) => console.log(error));
+        .catch((error) => console.error("ambience.prefs::", error));
     }
 
     _saveResource({ resourceType, name, uri, id }) {
@@ -131,14 +123,17 @@ const SoundSettings = GObject.registerClass(
       this._settings.set_value("resources", builder.end());
     }
 
-    _updateResourcesList(resources) {
+    /*
+     * update the resources list in the gui
+     */
+    _updateResourcesList() {
       this._entries.forEach((entry) => {
         this._soundGroup.remove(entry);
       });
 
       this._entries = [];
 
-      resources.forEach((resource) => {
+      this._getResources().forEach((resource) => {
         const entry = new ResourceEntry(
           resource,
           (entry) => this._editEntry(entry),
@@ -164,28 +159,20 @@ const SoundSettings = GObject.registerClass(
         .choose(this._window, null)
         .then((action) => {
           if (action === "save") {
-            this._saveResource({
-              resourceType: dialog._resourceType.selected,
-              name: dialog._nameRow.text,
-              uri:
-                dialog._resourceType.selected === 0
-                  ? dialog._fileRow.text
-                  : dialog._urlRow.text,
-              id: dialog._resourceId,
-            });
+            this._saveResource(dialog.getData());
           }
         })
-        .catch((error) => console.log(error));
+        .catch((error) =>
+          console.error("ambience.prefs:: error editing entry:", error),
+        );
     }
 
     _deleteEntry(entry) {
-      const resources = this._settings
-        .get_value("resources")
-        .recursiveUnpack()
-        .filter((resource) => resource.id !== entry.id);
+      const resources = this._getResources().filter(
+        (resource) => resource.id !== entry.id,
+      );
 
       this._persistResources(resources);
-      this._updateResourcesList(resources);
     }
   },
 );
@@ -273,6 +260,18 @@ const AddResourceDialog = GObject.registerClass(
       this.add_response("save", _("Save"));
       this.set_response_appearance("save", 1);
       this.set_response_enabled("save", editable !== null);
+    }
+
+    getData() {
+      return {
+        resourceType: this._resourceType.selected,
+        name: this._nameRow.text,
+        uri:
+          this._resourceType.selected === 0
+            ? this._fileRow.text
+            : this._urlRow.text,
+        id: this._resourceId,
+      };
     }
 
     /*
